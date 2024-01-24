@@ -1,0 +1,45 @@
+env {
+    spark.app.name = "seatunnel_mongo_to_ck_core_device_demo"
+    # You can set spark configuration here
+    # see available properties defined by spark: https://spark.apache.org/docs/latest/configuration.html#available-properties
+    spark.executor.instances = 2
+    spark.executor.cores = 1
+    spark.executor.memory = "2g"
+}
+source {
+    mongodb {
+        readconfig.uri = "mongodb://core_user:xxx@10.104.20.248:27018/gizwits_core"
+        readconfig.database = "gizwits_core"
+        readconfig.collection = "device"
+        readconfig.password = "xxx"
+        readconfig.spark.mongodb.input.partitioner = "MongoPaginateBySizePartitioner"
+        schema="{\"created_at\":\"date\",\"updated_at\":\"date\",\"product_key\":\"string\",\"did\":\"string\", \"passcode\":\"string\", \"mac\":\"string\"}"
+        result_table_name = "core_device"
+    }
+}
+transform {
+   sql {
+      sql = "SELECT created_at, updated_at, product_key,did,passcode,mac, '2022-05-10' as dt FROM core_device"
+   }
+   json {
+      source_field = "created_at"
+      new_type = "datetime"
+   }
+   json {
+      source_field = "updated_at"
+      new_type = "datetime"
+   }
+   json {
+      source_field = "dt"
+      new_type = "date"
+   }
+}
+sink {
+    clickhouse {
+        host = "xxx:8123"
+        database = "test"
+        table = "ods_core_device"
+        fields = ["created_at", "updated_at", "product_key", "did", "passcode",  "mac", "dt"]
+        username = "default"
+    }
+}
